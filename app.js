@@ -1,33 +1,31 @@
-const http = require('http');
+const fs = require('fs');
+const https = require('https');
+const express = require('express');
+const bodyParser = require('body-parser');
 
+const app = express();
 const port = 3000;
 
-const server = http.createServer((req, res) => {
-  if (req.method === 'POST') {
-    let body = '';
+// SSL 인증서와 키 파일 로드
+const privateKey = fs.readFileSync('./server.key', 'utf8');
+const certificate = fs.readFileSync('./server.crt', 'utf8');
+const credentials = { key: privateKey, cert: certificate };
 
-    // 데이터 수신 중 이벤트 핸들러
-    req.on('data', chunk => {
-      body += chunk.toString(); // 데이터를 문자열로 변환하여 누적
-    });
+// body-parser 미들웨어 사용하여 JSON 요청 본문 파싱
+app.use(bodyParser.text({ type: 'text/plain' }));
 
-    // 데이터 수신 완료 이벤트 핸들러
-    req.on('end', () => {
-      console.log('Received data:');
-      console.log(body);
-
-      res.statusCode = 200;
-      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-      res.end('Data received');
-    });
-  } else {
-    res.statusCode = 405;
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.end('Only POST method is supported');
-  }
+// POST 요청을 처리하는 라우트 정의
+app.post('/', (req, res) => {
+    const receivedData = req.body;
+    console.log('Received data:');
+    console.log(receivedData);
+    
+    res.status(200).send('Data received successfully');
 });
 
-// 서버 시작
-server.listen(port, () => {
-  console.log(`Server running at port:${port}/`);
+// HTTPS 서버 시작
+const httpsServer = https.createServer(credentials, app);
+
+httpsServer.listen(port, () => {
+    console.log(`HTTPS Server is listening on port ${port}`);
 });
